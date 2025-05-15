@@ -1,0 +1,208 @@
+﻿@page "/"
+@page "/sorting"
+
+<div class="d-flex flex-column align-items-center justify-content-center text-center">
+    <h3>Sorting Algorithms</h3>
+
+    <div class="d-flex justify-content-center align-items-center p-2 gap-3 mt-3">
+        <div>
+            <label class="fw-bold">Number of bars: @numBars</label>
+            <input type="range" class="form-range" min="20" max="100" value="@numBars" @oninput="UpdateBarCount" />
+        </div>
+        <div>
+            <label class="fw-bold">Algorithm</label>
+            <select class="form-select" @bind="selectedAlgorithm">
+                <option value="BubbleSort">Bubble Sort</option>
+                <option value="SelectionSort">Selection Sort</option>
+                <option value="InsertionSort">Insertion Sort</option>
+                <option value="QuickSort">Quick Sort</option>
+                <option value="MergeSort">Merge Sort</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="card shadow-lg p-4 bg-light border-5 border-secondary">
+        <div class="d-flex justify-content-center align-items-end flex-nowrap w-100 overflow-hidden" style="height: 300px;">
+            @for (int i = 0; i < bars.Length; i++)
+            {
+                //if sorting is in progress, no-transition class is applied to disable bootstrap ease-in-out effect
+                //while iterating through bars, if the current bar == one of the highlight indexes, different styling is applied, including the color to show which bars are being compared
+                <div class="@(isSorting ? "sorting-bar-no-transition" : "sorting-bar") @(i == highlightIndex1 || i == highlightIndex2 ? "bg-danger shadow-lg" : "bg-primary shadow")"
+                     style="width: @(Math.Max(2, 700 / numBars) + "px");
+                            margin-right: @(Math.Max(1, 50 / numBars) + "px");
+                            height: @(bars[i] + "px");
+                            border-radius: 4px;
+                            background: @(i == highlightIndex1 || i == highlightIndex2
+                                        ? "linear-gradient(180deg, rgba(220, 53, 69, 1) 0%, rgba(220, 53, 69, 0.8) 100%)"
+                                        : "linear-gradient(180deg, rgba(0, 123, 255, 1) 0%, rgba(0, 123, 255, 0.8) 100%)");">
+                </div>
+            }
+        </div>
+    </div>
+    <div class="d-flex justify-content-center gap-3 mt-4">
+        <button class="btn btn-primary btn-lg rounded-pill mt-3" @onclick="GenerateRandomBars">
+            <i class="bi-arrow-repeat"></i>Randomize Bars
+        </button>
+        <button class="btn btn-success btn-lg rounded-pill mt-3" @onclick="RunSortingAlgorithm">
+            <i class="bi-play"></i>Sort
+        </button>
+    </div>
+</div>
+
+
+@code {
+    private int numBars = 60; //default 60 bars and is bound to the Number of bars slider
+    private int[] bars = new int[100];
+    private Random random = new Random();
+    private string selectedAlgorithm = "BubbleSort"; //default
+    private CancellationTokenSource? cts;
+    private int highlightIndex1 = -1;
+    private int highlightIndex2 = -1;
+    //speed is the delay between each visual change -- delay of 0 will sort the bars without visually seeing each comparison/change
+    private int speed => numBars >= 30
+                ? (int)Math.Pow(3000 / numBars, 0.9)
+                : 200;
+    private bool isSorting = false;
+
+
+    protected override void OnInitialized()
+    {
+        GenerateRandomBars();
+    }
+
+
+    private void GenerateRandomBars() //Generates bars of random height between 10-300px. The amount of bars generated is determined by the slider {numBars}
+    {
+        cts?.Cancel(); //Any sorting is cancelled when the user clicks randomize
+        bars = new int[numBars];
+        for (int i = 0; i < bars.Length; i++)
+        {
+            bars[i] = random.Next(10, 300);
+        }
+        //Reset the highlight index to the beginning after new bar graph is populated. This will ensure the highlight visual starts at the beginning.
+        highlightIndex1 = -1;
+        highlightIndex2 = -1;
+    }
+
+
+    private void UpdateBarCount(ChangeEventArgs e) //Called whenever the slider is changed -- bound to its oninput function
+    {
+        numBars = int.Parse(e.Value.ToString());
+        bars = new int[numBars];
+        GenerateRandomBars(); //Enables bars to visually change as the slider is moved
+    }
+
+    private async Task RunSortingAlgorithm()
+    { //This function is called when the user clicks "Run", referencing selectedAlgorithm which is bound to the "Algorithm" dropdown input
+
+        isSorting = true; //Tracking the sorting here due to BootStrap animations. BootStrap animations are disabled when true so the user can visually see the sorting process more clearly (see bar div element)
+        StateHasChanged();
+
+        cts?.Cancel(); //Cancel any current sorting algorithms
+        cts = new CancellationTokenSource();
+        try
+        {
+            switch (selectedAlgorithm)
+            {
+                case "BubbleSort":
+                    await BubbleSort(cts.Token);
+                    break;
+                case "SelectionSort":
+                    await SelectionSort(cts.Token);
+                    break;
+                case "InsertionSort":
+                    await InsertionSort(cts.Token);
+                    break;
+                case "QuickSort":
+                    await QuickSort(cts.Token);
+                    break;
+                case "MergeSort":
+                    await MergeSort(cts.Token);
+                    break;
+            }
+        }
+        catch (TaskCanceledException) { }
+
+        isSorting = false;
+        StateHasChanged();
+    }
+
+    private async Task BubbleSort(CancellationToken token)
+    {
+        for (int i = 0; i < bars.Length - 1; i++)
+        {
+            for (int j = 0; j < bars.Length - i - 1; j++)
+            {
+                if (token.IsCancellationRequested) return; //ensures the visualization is canceled if the user runs another algorithm or changes the bar count
+
+                //keeping track of the bars being compared to change visuals (see bar div element)
+                highlightIndex1 = j;
+                highlightIndex2 = j + 1;
+                StateHasChanged(); //reloads UI to apply comparison highlighting throughout the iteration
+                await Task.Delay(speed, token);
+
+                if (bars[j] > bars[j + 1])
+                {
+                    (bars[j], bars[j + 1]) = (bars[j + 1], bars[j]);
+                    StateHasChanged();
+                    await Task.Delay(speed, token);
+                }
+            }
+        }
+        //Algorithm complete -- reset highlight indexes and reload UI to show no bars are being compared
+        highlightIndex1 = -1;
+        highlightIndex2 = -1;
+        StateHasChanged();
+    }
+
+    private async Task SelectionSort(CancellationToken token)
+    {
+        //TODO
+        for (int i = 0; i < bars.Length - 1; i++)
+        {
+            int minIndex = i;
+
+            for (int j = i + 1; j < bars.Length; j++)
+            {
+                if (token.IsCancellationRequested) return;
+
+                highlightIndex1 = minIndex;
+                highlightIndex2 = j;
+                StateHasChanged();
+                await Task.Delay(speed, token);
+
+                if (bars[j] < bars[minIndex])
+                {
+                    minIndex = j;
+                }
+            }
+
+            if (minIndex != i)
+            {
+                (bars[i], bars[minIndex]) = (bars[minIndex], bars[i]);
+                StateHasChanged();
+                await Task.Delay(speed, token);
+            }
+        }
+
+        highlightIndex1 = -1;
+        highlightIndex2 = -2;
+        StateHasChanged();
+    }
+
+    private async Task InsertionSort(CancellationToken token)
+    {
+        //TODO
+    }
+
+    private async Task QuickSort(CancellationToken token)
+    {
+        //TODO
+    }
+
+    private async Task MergeSort(CancellationToken token)
+    {
+        //TODO
+    }
+}
+
