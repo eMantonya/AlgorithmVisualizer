@@ -25,10 +25,9 @@
         <div class="d-flex justify-content-center align-items-end flex-nowrap w-100 overflow-hidden" style="height: 300px;">
             @for (int i = 0; i < bars.Length; i++)
             {
-                //if sorting is in progress, no-transition class is applied to disable bootstrap ease-in-out effect
-                //while iterating through bars, if the current bar == one of the highlight indexes, different styling is applied, including the color to show which bars are being compared
+                //bars are visually changed depending on the status of the bars (sorting, comparing)
                 <div class="@(isSorting ? "sorting-bar-no-transition" : "sorting-bar") @(i == highlightIndex1 || i == highlightIndex2 ? "bg-danger shadow-lg" : "bg-primary shadow")"
-                     style="width: @(Math.Max(2, 700 / numBars) + "px");
+                style="width: @(Math.Max(2, 700 / numBars) + "px");
                             margin-right: @(Math.Max(1, 50 / numBars) + "px");
                             height: @(bars[i] + "px");
                             border-radius: 4px;
@@ -58,10 +57,9 @@
     private CancellationTokenSource? cts;
     private int highlightIndex1 = -1;
     private int highlightIndex2 = -1;
-    //speed is the delay between each visual change -- delay of 0 will sort the bars without visually seeing each comparison/change
     private int speed => numBars >= 30
                 ? (int)Math.Pow(3000 / numBars, 0.9)
-                : 200;
+                : 200; //speed is the delay between each visual change -- delay of 0 will sort the bars without visually seeing each comparison/change
     private bool isSorting = false;
 
 
@@ -71,34 +69,38 @@
     }
 
 
-    private void GenerateRandomBars() //Generates bars of random height between 10-300px. The amount of bars generated is determined by the slider {numBars}
+    // Generates bars of random height between 10-300px. 
+    // The amount of bars generated is determined by the slider {numBars}
+    private void GenerateRandomBars()
     {
-        cts?.Cancel(); //Any sorting is cancelled when the user clicks randomize
+        cts?.Cancel(); //Any current sorting needs to be cancelled when array size is changed
         bars = new int[numBars];
         for (int i = 0; i < bars.Length; i++)
         {
             bars[i] = random.Next(10, 300);
         }
-        //Reset the highlight index to the beginning after new bar graph is populated. This will ensure the highlight visual starts at the beginning.
+        //Reset highlight index. This will ensure the highlight visual starts at the beginning.
         highlightIndex1 = -1;
         highlightIndex2 = -1;
     }
 
-
-    private void UpdateBarCount(ChangeEventArgs e) //Called whenever the slider is changed -- bound to its oninput function
+    // Updates numBars variable and array size
+    private void UpdateBarCount(ChangeEventArgs e)
     {
         numBars = int.Parse(e.Value.ToString());
         bars = new int[numBars];
-        GenerateRandomBars(); //Enables bars to visually change as the slider is moved
+        GenerateRandomBars();
     }
 
+    // Calls the selected algorithm's function
     private async Task RunSortingAlgorithm()
-    { //This function is called when the user clicks "Run", referencing selectedAlgorithm which is bound to the "Algorithm" dropdown input
-
-        isSorting = true; //Tracking the sorting here due to BootStrap animations. BootStrap animations are disabled when true so the user can visually see the sorting process more clearly (see bar div element)
+    { 
+        // Tracking the sorting here due to BootStrap animations. 
+        // BootStrap animations are disabled when true so the user can visually see the sorting process more clearly (see bar div element)
+        isSorting = true; 
         StateHasChanged();
 
-        cts?.Cancel(); //Cancel any current sorting algorithms
+        cts?.Cancel(); 
         cts = new CancellationTokenSource();
         try
         {
@@ -135,7 +137,6 @@
             {
                 if (token.IsCancellationRequested) return; //ensures the visualization is canceled if the user runs another algorithm or changes the bar count
 
-                //keeping track of the bars being compared to change visuals (see bar div element)
                 highlightIndex1 = j;
                 highlightIndex2 = j + 1;
                 StateHasChanged(); //reloads UI to apply comparison highlighting throughout the iteration
@@ -157,7 +158,6 @@
 
     private async Task SelectionSort(CancellationToken token)
     {
-        //TODO
         for (int i = 0; i < bars.Length - 1; i++)
         {
             int minIndex = i;
@@ -192,12 +192,85 @@
 
     private async Task InsertionSort(CancellationToken token)
     {
-        //TODO
+        for (int i = 1; i < bars.Length; i++)
+        {
+            int key = bars[i];
+            int j = i - 1;
+
+            while (j >= 0 && bars[j] > key)
+            {
+                if (token.IsCancellationRequested) return;
+
+                highlightIndex1 = j;
+                highlightIndex2 = j + 1;
+                StateHasChanged();
+                await Task.Delay(speed, token);
+
+                bars[j + 1] = bars[j];
+                StateHasChanged();
+                await Task.Delay(speed, token);
+
+                j--;
+            }
+
+            bars[j + 1] = key;
+            StateHasChanged();
+            await Task.Delay(speed, token);
+        }
+
+        highlightIndex1 = -1;
+        highlightIndex2 = -1;
+        StateHasChanged();
     }
 
     private async Task QuickSort(CancellationToken token)
     {
-        //TODO
+        await QuickSortRecursive(0, bars.Length - 1, token);
+        highlightIndex1 = -1;
+        highlightIndex2 = -1;
+        StateHasChanged();
+    }
+
+    private async Task QuickSortRecursive(int low, int high, CancellationToken token)
+    {
+        if (low < high)
+        {
+            if (token.IsCancellationRequested) return;
+
+            int pivotIndex = await Partition(low, high, token);
+            await QuickSortRecursive(low, pivotIndex - 1, token);
+            await QuickSortRecursive(pivotIndex + 1, high, token);
+        }
+    }
+
+    private async Task<int> Partition(int low, int high, CancellationToken token)
+    {
+        int pivot = bars[high];
+        int i = low - 1;
+
+        for (int j = low; j < high; j++)
+        {
+            if (token.IsCancellationRequested) return low - 1;
+
+            highlightIndex1 = j;
+            highlightIndex2 = high;
+            StateHasChanged();
+            await Task.Delay(speed, token);
+
+            if (bars[j] < pivot)
+            {
+                i++;
+                (bars[i], bars[j]) = (bars[j], bars[i]);
+                StateHasChanged();
+                await Task.Delay(speed, token);
+            }
+        }
+
+        (bars[i + 1], bars[high]) = (bars[high], bars[i + 1]);
+        StateHasChanged();
+        await Task.Delay(speed, token);
+
+        return i + 1;
     }
 
     private async Task MergeSort(CancellationToken token)
