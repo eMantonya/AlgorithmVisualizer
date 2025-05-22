@@ -38,6 +38,9 @@
             }
         </div>
     </div>
+    <div class="ms-4 p-3 border rounded shadow-lg text-start">
+        <p>@algorithmDescription</p>
+    </div>
     <div class="d-flex justify-content-center gap-3 mt-4">
         <button class="btn btn-primary btn-lg rounded-pill mt-3" @onclick="GenerateRandomBars">
             <i class="bi-arrow-repeat"></i>Randomize Bars
@@ -61,6 +64,7 @@
                 ? (int)Math.Pow(3000 / numBars, 0.9)
                 : 200; //speed is the delay between each visual change -- delay of 0 will sort the bars without visually seeing each comparison/change
     private bool isSorting = false;
+    private string algorithmDescription = "";
 
 
     protected override void OnInitialized()
@@ -107,18 +111,23 @@
             switch (selectedAlgorithm)
             {
                 case "BubbleSort":
+                    algorithmDescription = "Bubble Sort repeatedly swaps adjacent elements if they are in the wrong order.";
                     await BubbleSort(cts.Token);
                     break;
                 case "SelectionSort":
+                    algorithmDescription = "Selection Sort finds the smallest element and swaps it to the correct position.";
                     await SelectionSort(cts.Token);
                     break;
                 case "InsertionSort":
+                    algorithmDescription = "Insertion Sort builds the sorted array one item at a time by inserting elements.";
                     await InsertionSort(cts.Token);
                     break;
                 case "QuickSort":
+                    algorithmDescription = "QuickSort partitions elements around a pivot and recursively sorts each section.";
                     await QuickSort(cts.Token);
                     break;
                 case "MergeSort":
+                    algorithmDescription = "Merge Sort divides the array into smaller sections and merges them in order.";
                     await MergeSort(cts.Token);
                     break;
             }
