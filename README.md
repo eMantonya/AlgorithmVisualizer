@@ -24,12 +24,5 @@ This project is an **algorithm visualizer** built with Blazor. It allows users t
   <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/azure/azure-original.svg" width="50px" alt="Azure" />
 </p>
 
-
-## How to Use
-1. Choose a sorting algorithm from the dropdown menu.
-2. Adjust the number of bars using the slider.
-3. Click the "Sort" button to start visualization.
-4. Click "Randomize Bars" to shuffle the dataset.
-
 ## Live Demo
 You can try the project live here: **[[Algorithm Visualizer](https://red-coast-06428c910.6.azurestaticapps.net/)]**
