@@ -32,4 +32,4 @@ This project is an **algorithm visualizer** built with Blazor. It allows users t
 4. Click "Randomize Bars" to shuffle the dataset.
 
 ## Live Demo
-You can try the project live here: **[[Algorithm Visualizer](https://jolly-glacier-0612ee910.6.azurestaticapps.net/)]**
+You can try the project live here: **[[Algorithm Visualizer](https://red-coast-06428c910.6.azurestaticapps.net/)]**
